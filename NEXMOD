@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEXMOD STORE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <style>
+        :root { --bg: #ffffff; --card: #ffffff; --text: #1e293b; --primary: #0084ff; --border: #f1f5f9; }
+        body.dark-mode { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); transition: 0.3s; min-height: 100vh; overflow-x: hidden; }
+        
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 0 15px; background: var(--card); border-bottom: 2px solid var(--primary); height: 60px; position: sticky; top: 0; z-index: 1000; width: 100%; }
+        .logo { font-family: 'Orbitron'; font-size: 18px; color: var(--primary); font-weight: bold; }
+
+        #sidebar { position: fixed; left: -280px; top: 0; width: 250px; height: 100%; background: var(--card); transition: 0.3s; z-index: 3000; padding: 20px; border-right: 1px solid var(--primary); }
+        #sidebar.active { left: 0; }
+        .side-link { display: block; padding: 15px; border-bottom: 1px solid var(--border); color: var(--text); cursor: pointer; text-decoration: none; font-weight: 600; }
+
+        .container { padding: 15px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .app-card { background: var(--card); border-radius: 20px; padding: 12px; text-align: center; border: 1px solid var(--border); cursor: pointer; }
+        .app-card img { width: 75px; height: 75px; border-radius: 18px; object-fit: cover; background: #f8f9fa; }
+
+        .modal { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 5000; overflow-y: auto; }
+        .modal-content { width: 100%; max-width: 450px; margin: auto; padding: 20px; }
+        
+        .detail-box { background: var(--card); border-radius: 20px; padding: 15px; border: 1px solid var(--border); margin-top: 20px; }
+        .row-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .row-item:last-child { border: 0; }
+        .icon-circle { width: 35px; height: 35px; background: var(--primary); color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-right: 12px; }
+        .lbl { font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
+        .value { font-weight: 600; font-size: 14px; }
+
+        .admin-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 6000; align-items: center; justify-content: center; padding: 20px; }
+        .admin-box { background: var(--card); width: 100%; max-width: 380px; padding: 25px; border-radius: 24px; text-align: center; border: 1px solid var(--primary); }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: inherit; }
+
+        .dl-btn { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 14px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 16px; }
+        .back-icon { font-size: 20px; padding: 15px; cursor: pointer; color: var(--primary); }
+
+        footer { text-align: center; padding: 100px 20px 40px; margin-top: 50px; border-top: 1px solid var(--border); opacity: 0.7; }
+        .f-name { font-family: 'Orbitron'; color: var(--primary); font-size: 13px; font-weight: bold; cursor: pointer; }
+
+        /* एडमिन लिस्ट के आइकॉन के लिए स्टाइल */
+        .admin-list-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border); }
+        .admin-list-img { width: 30px; height: 30px; border-radius: 6px; margin-right: 10px; object-fit: cover; border: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div onclick="toggleSidebar()" style="cursor:pointer; font-size:22px;"><i class="fas fa-bars"></i></div>
+    <div class="logo">NEXMOD STORE</div>
+    <div onclick="toggleDark()" style="cursor:pointer; font-size:22px;"><i class="fas fa-moon" id="themeIcon"></i></div>
+</nav>
+
+<div id="sidebar">
+    <h3 style="color:var(--primary); font-family:'Orbitron'; padding-bottom:10px;">MENU</h3>
+    <div class="side-link" onclick="toggleSidebar()">🏠 Home</div>
+    <div class="side-link" onclick="toggleDark(); toggleSidebar();">🌓 Switch Theme</div>
+    <a href="https://t.me/yourlink" class="side-link">📢 Telegram</a>
+    <div class="side-link" style="color:red; margin-top:30px;" onclick="toggleSidebar()">❌ Close</div>
+</div>
+
+<div class="container" id="appGrid"></div>
+
+<footer>
+    <div class="f-name" onclick="enterAdmin()">BHAGIRATH GOSWAMI</div>
+</footer>
+
+<div id="adminModal" class="admin-modal">
+    <div class="admin-box">
+        <h3 style="font-family:'Orbitron'; color:var(--primary); margin-bottom:15px;">ADMIN PANEL</h3>
+        <input type="text" id="an" placeholder="App Name">
+        <input type="text" id="al" placeholder="Download Link">
+        <input type="text" id="ai" placeholder="Icon URL">
+        <button class="dl-btn" onclick="saveData()">🚀 PUBLISH APP</button>
+        <div id="manageList" style="margin-top:15px; max-height:200px; overflow-y:auto; text-align:left; border-top: 1px solid var(--border);"></div>
+        <button onclick="closeModal('adminModal')" style="margin-top:15px; color:red; background:none; border:none; font-weight:bold; cursor:pointer;">EXIT</button>
+    </div>
+</div>
+
+<div id="detailsPage" class="modal">
+    <div class="back-icon" onclick="closeModal('detailsPage')"><i class="fas fa-arrow-left"></i></div>
+    <div class="modal-content">
+        <div style="text-align:center;">
+            <img id="detImg" src="" style="width:100px; height:100px; border-radius:22px; border:2px solid var(--primary);">
+            <h2 id="detName" style="margin-top:15px; font-family:'Orbitron'; font-size: 20px;"></h2>
+        </div>
+        <div class="detail-box">
+            <div class="row-item">
+                <div class="icon-circle"><i class="fas fa-info-circle"></i></div>
+                <div><div class="lbl">App Name</div><div class="value" id="dn_label"></div></div>
+            </div>
+            <div class="row-item">
+                <div class="icon-circle"><i class="fas fa-code-branch"></i></div>
+                <div><div class="lbl">Version</div><div class="value">1.0 (Premium)</div></div>
+            </div>
+            <div class="row-item">
+                <div class="icon-circle"><i class="fas fa-shield-alt"></i></div>
+                <div><div class="lbl">Security</div><div class="value" style="color: #10b981;">Verified & Safe</div></div>
+            </div>
+        </div>
+        <button id="finalDlBtn" class="dl-btn">🚀 START DOWNLOAD</button>
+    </div>
+</div>
+
+<script>
+    var firebaseConfig = {
+        apiKey: "AIzaSyD2d8L75KLPCX_Atw75xaOtzk-tueKtmYI",
+        authDomain: "nexmod-82af6.firebaseapp.com",
+        projectId: "nexmod-82af6",
+        appId: "1:87624441194:web:2a88038d792ca6bae8d913"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
+    function toggleDark() { 
+        document.body.classList.toggle('dark-mode'); 
+        let icon = document.getElementById('themeIcon');
+        if(document.body.classList.contains('dark-mode')) { icon.classList.replace('fa-moon', 'fa-sun'); } 
+        else { icon.classList.replace('fa-sun', 'fa-moon'); }
+    }
+
+    function enterAdmin() {
+        let now = new Date();
+        let h = now.getHours() % 12 || 12; 
+        let m = now.getMinutes().toString().padStart(2, '0');
+        let currentTime = h.toString() + m; 
+        let pass = prompt(""); 
+        if(pass === currentTime) {
+            document.getElementById('adminModal').style.display = 'flex';
+            loadAdminList();
+        }
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    function saveData() {
+        let n = document.getElementById('an').value, l = document.getElementById('al').value, i = document.getElementById('ai').value;
+        if(n && l && i) {
+            db.collection("apps").add({ name: n, link: l, img: i, ts: Date.now() }).then(() => location.reload());
+        }
+    }
+
+    // एडमिन लिस्ट में आइकॉन वाला फंक्शन
+    function loadAdminList() {
+        db.collection("apps").orderBy("ts", "desc").get().then(qs => {
+            let list = document.getElementById('manageList'); list.innerHTML = '';
+            qs.forEach(doc => {
+                let d = doc.data();
+                list.innerHTML += `
+                <div class="admin-list-item">
+                    <div style="display:flex; align-items:center;">
+                        <img src="${d.img}" class="admin-list-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1243/1243420.png'">
+                        <span style="font-size:12px; font-weight:600;">${d.name}</span>
+                    </div>
+                    <i class="fas fa-trash" style="color:red; cursor:pointer;" onclick="deleteApp('${doc.id}')"></i>
+                </div>`;
+            });
+        });
+    }
+
+    function deleteApp(id) { if(confirm("Delete?")) db.collection("apps").doc(id).delete().then(()=>loadAdminList()); }
+
+    function openDetails(name, img, link) {
+        document.getElementById('detName').innerText = name;
+        document.getElementById('dn_label').innerText = name;
+        document.getElementById('detImg').src = img;
+        document.getElementById('detailsPage').style.display = 'block';
+        document.getElementById('finalDlBtn').onclick = () => { window.location.href = link; };
+    }
+
+    db.collection("apps").orderBy("ts", "desc").onSnapshot(qs => {
+        let grid = document.getElementById('appGrid'); grid.innerHTML = '';
+        qs.forEach(doc => {
+            let d = doc.data();
+            grid.innerHTML += `
+                <div class="app-card" onclick="openDetails('${d.name}', '${d.img}', '${d.link}')">
+                    <img src="${d.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1243/1243420.png'">
+                    <div style="font-weight:600; font-size:12px; margin-top:8px;">${d.name}</div>
+                </div>`;
+        });
+    });
+</script>
+</body>
+</html>
